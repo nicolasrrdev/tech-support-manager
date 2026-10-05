@@ -46,6 +46,12 @@ const crearSolicitud = async (data) => {
   return await solicitud.save();
 };
 
+const obtenerSolicitudes = async () => {
+  return await Solicitud.find().sort({
+    fechaCreacion: -1
+  });
+};
+
 const obtenerSolicitudPorId = async (id) => {
   if (!mongoose.Types.ObjectId.isValid(id)) {
     const error = new Error("El ID de la solicitud no es válido");
@@ -187,5 +193,6 @@ module.exports = {
   cambiarEstadoSolicitud,
   eliminarSolicitud,
   obtenerHistorial,
-  validarTransicionEstado
+  validarTransicionEstado,
+  obtenerSolicitudes
 };
