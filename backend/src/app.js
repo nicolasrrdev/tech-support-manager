@@ -1,6 +1,8 @@
 const express = require("express");
 const cors = require("cors");
 
+const errorMiddleware = require("./middlewares/error.middleware");
+
 const app = express();
 
 app.use(cors());
@@ -13,5 +15,7 @@ app.get("/api/health", (req, res) => {
     message: "TechSupport Manager API funcionando correctamente"
   });
 });
+
+app.use(errorMiddleware);
 
 module.exports = app;
