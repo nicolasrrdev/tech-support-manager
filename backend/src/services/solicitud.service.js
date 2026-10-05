@@ -49,7 +49,7 @@ const crearSolicitud = async (data) => {
   return await solicitud.save();
 };
 
-const obtenerSolicitudes = async (filtros) => {
+const obtenerSolicitudes = async (filtros = {}) => {
   const {
     busqueda,
     estado,
@@ -321,6 +321,19 @@ const cambiarEstadoSolicitud = async (id, data) => {
   ) {
     const error = new Error(
       "Una solicitud con prioridad Crítica requiere una observación para ser resuelta"
+    );
+
+    error.statusCode = 400;
+
+    throw error;
+  }
+
+  if (
+    estado === "Cancelada" &&
+    (!observacion || !observacion.trim())
+  ) {
+    const error = new Error(
+      "Se requiere una observación para cancelar la solicitud"
     );
 
     error.statusCode = 400;
