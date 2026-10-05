@@ -256,6 +256,19 @@ const actualizarSolicitud = async (id, data) => {
 
   const solicitud = await obtenerSolicitudPorId(id);
 
+  if (
+    solicitud.estado !== "Pendiente" &&
+    solicitud.estado !== "En progreso"
+  ) {
+    const error = new Error(
+      `No se puede editar una solicitud en estado "${solicitud.estado}"`
+    );
+
+    error.statusCode = 400;
+
+    throw error;
+  }
+
   const solicitudData = actualizarSolicitudDTO(data);
 
   solicitud.titulo = solicitudData.titulo;
