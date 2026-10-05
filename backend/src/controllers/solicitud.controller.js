@@ -16,11 +16,15 @@ const crearSolicitud = async (req, res, next) => {
 
 const obtenerSolicitudes = async (req, res, next) => {
   try {
-    const solicitudes = await solicitudService.obtenerSolicitudes();
+    const resultado =
+      await solicitudService.obtenerSolicitudes(
+        req.query
+      );
 
     res.status(200).json({
       ok: true,
-      data: solicitudes
+      data: resultado.solicitudes,
+      paginacion: resultado.paginacion
     });
   } catch (error) {
     next(error);

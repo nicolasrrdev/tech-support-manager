@@ -3,7 +3,10 @@ const mongoose = require("mongoose");
 const Solicitud = require("../models/solicitud.model");
 
 const {
-  TRANSICIONES_ESTADO
+  TRANSICIONES_ESTADO,
+  CATEGORIAS,
+  PRIORIDADES,
+  ESTADOS
 } = require("../models/solicitud.constants");
 
 const {
@@ -46,24 +49,200 @@ const crearSolicitud = async (data) => {
   return await solicitud.save();
 };
 
-const obtenerSolicitudes = async () => {
-  return await Solicitud.find().sort({
-    fechaCreacion: -1
-  });
+const obtenerSolicitudes = async (filtros) => {
+  const {
+    busqueda,
+    estado,
+    prioridad,
+    categoria,
+    orden = "fechaCreacion",
+    direccion = "desc",
+    pagina = 1,
+    limite = 10
+  } = filtros;
+
+  const paginaNumero = Number(pagina);
+  const limiteNumero = Number(limite);
+
+  if (
+    !Number.isInteger(paginaNumero) ||
+    paginaNumero < 1
+  ) {
+    const error = new Error(
+      "El parámetro pagina debe ser un número entero mayor o igual a 1"
+    );
+
+    error.statusCode = 400;
+
+    throw error;
+  }
+
+  if (
+    !Number.isInteger(limiteNumero) ||
+    limiteNumero < 1 ||
+    limiteNumero > 100
+  ) {
+    const error = new Error(
+      "El parámetro limite debe ser un número entre 1 y 100"
+    );
+
+    error.statusCode = 400;
+
+    throw error;
+  }
+
+  const camposOrdenPermitidos = [
+    "titulo",
+    "prioridad",
+    "estado",
+    "categoria",
+    "fechaCreacion",
+    "fechaActualizacion"
+  ];
+
+  if (!camposOrdenPermitidos.includes(orden)) {
+    const error = new Error(
+      `El campo de ordenamiento "${orden}" no es válido`
+    );
+
+    error.statusCode = 400;
+
+    throw error;
+  }
+
+  if (!["asc", "desc"].includes(direccion)) {
+    const error = new Error(
+      'El parámetro direccion debe ser "asc" o "desc"'
+    );
+
+    error.statusCode = 400;
+
+    throw error;
+  }
+
+  const filtroMongo = {};
+
+  if (estado) {
+    if (!ESTADOS.includes(estado)) {
+      const error = new Error(
+        "El estado utilizado como filtro no es válido"
+      );
+
+      error.statusCode = 400;
+
+      throw error;
+    }
+
+    filtroMongo.estado = estado;
+  }
+
+  if (prioridad) {
+    if (!PRIORIDADES.includes(prioridad)) {
+      const error = new Error(
+        "La prioridad utilizada como filtro no es válida"
+      );
+
+      error.statusCode = 400;
+
+      throw error;
+    }
+
+    filtroMongo.prioridad = prioridad;
+  }
+
+  if (categoria) {
+    if (!CATEGORIAS.includes(categoria)) {
+      const error = new Error(
+        "La categoría utilizada como filtro no es válida"
+      );
+
+      error.statusCode = 400;
+
+      throw error;
+    }
+
+    filtroMongo.categoria = categoria;
+  }
+
+  if (busqueda && busqueda.trim()) {
+    const textoBusqueda = busqueda.trim();
+
+    filtroMongo.$or = [
+      {
+        titulo: {
+          $regex: textoBusqueda,
+          $options: "i"
+        }
+      },
+      {
+        descripcion: {
+          $regex: textoBusqueda,
+          $options: "i"
+        }
+      },
+      {
+        usuarioSolicitante: {
+          $regex: textoBusqueda,
+          $options: "i"
+        }
+      }
+    ];
+  }
+
+  const salto = (paginaNumero - 1) * limiteNumero;
+
+  const direccionOrden =
+    direccion === "asc" ? 1 : -1;
+
+  const [solicitudes, total] = await Promise.all([
+    Solicitud.find(filtroMongo)
+      .sort({
+        [orden]: direccionOrden
+      })
+      .skip(salto)
+      .limit(limiteNumero),
+
+    Solicitud.countDocuments(filtroMongo)
+  ]);
+
+  const totalPaginas = Math.ceil(
+    total / limiteNumero
+  );
+
+  return {
+    solicitudes,
+    paginacion: {
+      total,
+      pagina: paginaNumero,
+      limite: limiteNumero,
+      totalPaginas,
+      tienePaginaAnterior: paginaNumero > 1,
+      tienePaginaSiguiente:
+        paginaNumero < totalPaginas
+    }
+  };
 };
 
 const obtenerSolicitudPorId = async (id) => {
   if (!mongoose.Types.ObjectId.isValid(id)) {
-    const error = new Error("El ID de la solicitud no es válido");
+    const error = new Error(
+      "El ID de la solicitud no es válido"
+    );
+
     error.statusCode = 400;
+
     throw error;
   }
 
   const solicitud = await Solicitud.findById(id);
 
   if (!solicitud) {
-    const error = new Error("Solicitud no encontrada");
+    const error = new Error(
+      "Solicitud no encontrada"
+    );
+
     error.statusCode = 404;
+
     throw error;
   }
 
@@ -81,7 +260,8 @@ const actualizarSolicitud = async (id, data) => {
 
   solicitud.titulo = solicitudData.titulo;
   solicitud.descripcion = solicitudData.descripcion;
-  solicitud.usuarioSolicitante = solicitudData.usuarioSolicitante;
+  solicitud.usuarioSolicitante =
+    solicitudData.usuarioSolicitante;
   solicitud.categoria = solicitudData.categoria;
   solicitud.prioridad = solicitudData.prioridad;
 
@@ -153,7 +333,8 @@ const cambiarEstadoSolicitud = async (id, data) => {
     estadoNuevo: estado,
     fechaHora: new Date(),
     usuarioResponsable,
-    observacion: observacion?.trim() || undefined
+    observacion:
+      observacion?.trim() || undefined
   });
 
   solicitud.estado = estado;
@@ -188,11 +369,11 @@ const obtenerHistorial = async (id) => {
 
 module.exports = {
   crearSolicitud,
+  obtenerSolicitudes,
   obtenerSolicitudPorId,
   actualizarSolicitud,
   cambiarEstadoSolicitud,
   eliminarSolicitud,
   obtenerHistorial,
-  validarTransicionEstado,
-  obtenerSolicitudes
+  validarTransicionEstado
 };
