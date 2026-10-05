@@ -1,0 +1,735 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "TechSupport Manager API",
+    "description": "API REST para la gestión de solicitudes de soporte tecnológico.",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3000",
+      "description": "Servidor local"
+    }
+  ],
+  "tags": [
+    {
+      "name": "Health",
+      "description": "Estado de la API"
+    },
+    {
+      "name": "Solicitudes",
+      "description": "Gestión de solicitudes de soporte"
+    },
+    {
+      "name": "Historial",
+      "description": "Historial de cambios de estado"
+    }
+  ],
+  "paths": {
+    "/api/health": {
+      "get": {
+        "tags": [
+          "Health"
+        ],
+        "summary": "Verificar estado de la API",
+        "responses": {
+          "200": {
+            "description": "API funcionando correctamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/solicitudes": {
+      "post": {
+        "tags": [
+          "Solicitudes"
+        ],
+        "summary": "Crear una solicitud",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearSolicitud"
+              },
+              "example": {
+                "titulo": "Equipo no enciende",
+                "descripcion": "El equipo del área administrativa no enciende correctamente.",
+                "usuarioSolicitante": "Nicolas",
+                "categoria": "Hardware",
+                "prioridad": "Alta"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Solicitud creada correctamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SolicitudResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Solicitudes"
+        ],
+        "summary": "Consultar solicitudes",
+        "description": "Obtiene solicitudes aplicando búsqueda, filtros, ordenamiento y paginación.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Busqueda"
+          },
+          {
+            "$ref": "#/components/parameters/Estado"
+          },
+          {
+            "$ref": "#/components/parameters/Prioridad"
+          },
+          {
+            "$ref": "#/components/parameters/Categoria"
+          },
+          {
+            "$ref": "#/components/parameters/Orden"
+          },
+          {
+            "$ref": "#/components/parameters/Direccion"
+          },
+          {
+            "$ref": "#/components/parameters/Pagina"
+          },
+          {
+            "$ref": "#/components/parameters/Limite"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Listado de solicitudes",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListadoSolicitudesResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          }
+        }
+      }
+    },
+    "/api/solicitudes/{id}": {
+      "get": {
+        "tags": [
+          "Solicitudes"
+        ],
+        "summary": "Consultar una solicitud",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/SolicitudId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Solicitud encontrada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SolicitudResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Solicitudes"
+        ],
+        "summary": "Actualizar una solicitud",
+        "description": "Solo se pueden editar solicitudes en estado Pendiente o En progreso.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/SolicitudId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActualizarSolicitud"
+              },
+              "example": {
+                "titulo": "Equipo no enciende",
+                "descripcion": "El equipo presenta problemas de alimentación.",
+                "usuarioSolicitante": "Nicolas",
+                "categoria": "Hardware",
+                "prioridad": "Crítica"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Solicitud actualizada correctamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SolicitudResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Solicitudes"
+        ],
+        "summary": "Eliminar una solicitud",
+        "description": "Solo se pueden eliminar solicitudes Pendientes o Canceladas.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/SolicitudId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Solicitud eliminada correctamente"
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/api/solicitudes/{id}/estado": {
+      "patch": {
+        "tags": [
+          "Solicitudes"
+        ],
+        "summary": "Cambiar estado de una solicitud",
+        "description": "Aplica las transiciones de estado permitidas y registra el cambio en el historial.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/SolicitudId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CambiarEstado"
+              },
+              "examples": {
+                "enProgreso": {
+                  "summary": "Pendiente → En progreso",
+                  "value": {
+                    "estado": "En progreso",
+                    "usuarioResponsable": "Soporte TI",
+                    "observacion": "Se inició la revisión del equipo."
+                  }
+                },
+                "resuelta": {
+                  "summary": "En progreso → Resuelta",
+                  "value": {
+                    "estado": "Resuelta",
+                    "usuarioResponsable": "Soporte TI",
+                    "observacion": "Se solucionó el inconveniente."
+                  }
+                },
+                "cancelada": {
+                  "summary": "Cancelar solicitud",
+                  "value": {
+                    "estado": "Cancelada",
+                    "usuarioResponsable": "Soporte TI",
+                    "observacion": "El usuario ya no requiere el servicio."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Estado actualizado correctamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SolicitudResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/api/solicitudes/{id}/historial": {
+      "get": {
+        "tags": [
+          "Historial"
+        ],
+        "summary": "Consultar historial de una solicitud",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/SolicitudId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Historial de la solicitud",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HistorialResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "parameters": {
+      "SolicitudId": {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "ID de MongoDB de la solicitud",
+        "schema": {
+          "type": "string",
+          "example": "65f1a7c8e4b3a12345678901"
+        }
+      },
+      "Busqueda": {
+        "name": "busqueda",
+        "in": "query",
+        "description": "Texto a buscar en título, descripción o usuario solicitante",
+        "schema": {
+          "type": "string",
+          "example": "equipo"
+        }
+      },
+      "Estado": {
+        "name": "estado",
+        "in": "query",
+        "schema": {
+          "type": "string",
+          "enum": [
+            "Pendiente",
+            "En progreso",
+            "Resuelta",
+            "Cancelada"
+          ]
+        }
+      },
+      "Prioridad": {
+        "name": "prioridad",
+        "in": "query",
+        "schema": {
+          "type": "string",
+          "enum": [
+            "Baja",
+            "Media",
+            "Alta",
+            "Crítica"
+          ]
+        }
+      },
+      "Categoria": {
+        "name": "categoria",
+        "in": "query",
+        "schema": {
+          "type": "string",
+          "enum": [
+            "Hardware",
+            "Software",
+            "Red",
+            "Accesos",
+            "Otros"
+          ]
+        }
+      },
+      "Orden": {
+        "name": "orden",
+        "in": "query",
+        "schema": {
+          "type": "string",
+          "enum": [
+            "titulo",
+            "prioridad",
+            "estado",
+            "categoria",
+            "fechaCreacion",
+            "fechaActualizacion"
+          ],
+          "default": "fechaCreacion"
+        }
+      },
+      "Direccion": {
+        "name": "direccion",
+        "in": "query",
+        "schema": {
+          "type": "string",
+          "enum": [
+            "asc",
+            "desc"
+          ],
+          "default": "desc"
+        }
+      },
+      "Pagina": {
+        "name": "pagina",
+        "in": "query",
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 1
+        }
+      },
+      "Limite": {
+        "name": "limite",
+        "in": "query",
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100,
+          "default": 10
+        }
+      }
+    },
+    "schemas": {
+      "HealthResponse": {
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "example": true
+          },
+          "message": {
+            "type": "string",
+            "example": "TechSupport Manager API funcionando correctamente"
+          }
+        }
+      },
+      "CrearSolicitud": {
+        "type": "object",
+        "required": [
+          "titulo",
+          "descripcion",
+          "usuarioSolicitante",
+          "categoria",
+          "prioridad"
+        ],
+        "properties": {
+          "titulo": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 150
+          },
+          "descripcion": {
+            "type": "string",
+            "minLength": 10,
+            "maxLength": 2000
+          },
+          "usuarioSolicitante": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 100
+          },
+          "categoria": {
+            "type": "string",
+            "enum": [
+              "Hardware",
+              "Software",
+              "Red",
+              "Accesos",
+              "Otros"
+            ]
+          },
+          "prioridad": {
+            "type": "string",
+            "enum": [
+              "Baja",
+              "Media",
+              "Alta",
+              "Crítica"
+            ]
+          }
+        }
+      },
+      "ActualizarSolicitud": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/CrearSolicitud"
+          }
+        ]
+      },
+      "CambiarEstado": {
+        "type": "object",
+        "required": [
+          "estado",
+          "usuarioResponsable"
+        ],
+        "properties": {
+          "estado": {
+            "type": "string",
+            "enum": [
+              "Pendiente",
+              "En progreso",
+              "Resuelta",
+              "Cancelada"
+            ]
+          },
+          "usuarioResponsable": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 100
+          },
+          "observacion": {
+            "type": "string",
+            "maxLength": 500
+          }
+        }
+      },
+      "Historial": {
+        "type": "object",
+        "properties": {
+          "estadoAnterior": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "example": "Pendiente"
+          },
+          "estadoNuevo": {
+            "type": "string",
+            "example": "En progreso"
+          },
+          "fechaHora": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "usuarioResponsable": {
+            "type": "string",
+            "example": "Soporte TI"
+          },
+          "observacion": {
+            "type": "string",
+            "example": "Se inició la revisión."
+          }
+        }
+      },
+      "Solicitud": {
+        "type": "object",
+        "properties": {
+          "_id": {
+            "type": "string"
+          },
+          "titulo": {
+            "type": "string"
+          },
+          "descripcion": {
+            "type": "string"
+          },
+          "usuarioSolicitante": {
+            "type": "string"
+          },
+          "categoria": {
+            "type": "string"
+          },
+          "prioridad": {
+            "type": "string"
+          },
+          "estado": {
+            "type": "string"
+          },
+          "fechaCreacion": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "fechaActualizacion": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "historial": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Historial"
+            }
+          }
+        }
+      },
+      "SolicitudResponse": {
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "example": true
+          },
+          "message": {
+            "type": "string"
+          },
+          "data": {
+            "$ref": "#/components/schemas/Solicitud"
+          }
+        }
+      },
+      "ListadoSolicitudesResponse": {
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "example": true
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Solicitud"
+            }
+          },
+          "paginacion": {
+            "$ref": "#/components/schemas/Paginacion"
+          }
+        }
+      },
+      "Paginacion": {
+        "type": "object",
+        "properties": {
+          "total": {
+            "type": "integer"
+          },
+          "pagina": {
+            "type": "integer"
+          },
+          "limite": {
+            "type": "integer"
+          },
+          "totalPaginas": {
+            "type": "integer"
+          },
+          "tienePaginaAnterior": {
+            "type": "boolean"
+          },
+          "tienePaginaSiguiente": {
+            "type": "boolean"
+          }
+        }
+      },
+      "HistorialResponse": {
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "example": true
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Historial"
+            }
+          }
+        }
+      },
+      "Error": {
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "example": false
+          },
+          "message": {
+            "type": "string"
+          },
+          "errors": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "responses": {
+      "ValidationError": {
+        "description": "Error de validación",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "NotFound": {
+        "description": "Solicitud no encontrada",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "InternalError": {
+        "description": "Error interno del servidor",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      }
+    }
+  }
+}

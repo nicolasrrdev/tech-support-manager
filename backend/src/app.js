@@ -1,8 +1,11 @@
 const express = require("express");
 const cors = require("cors");
+const swaggerUi = require("swagger-ui-express");
 
 const solicitudRoutes = require("./routes/solicitud.routes");
 const errorMiddleware = require("./middlewares/error.middleware");
+
+const swaggerDocument = require("../swagger.json");
 
 const app = express();
 
@@ -15,6 +18,12 @@ app.get("/api/health", (req, res) => {
     message: "TechSupport Manager API funcionando correctamente"
   });
 });
+
+app.use(
+  "/api-docs",
+  swaggerUi.serve,
+  swaggerUi.setup(swaggerDocument)
+);
 
 app.use("/api/solicitudes", solicitudRoutes);
 
